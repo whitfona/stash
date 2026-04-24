@@ -1,9 +1,11 @@
 <?php
 
 use App\Models\Location;
+use Livewire\Attributes\Layout;
+use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new class extends Component
+new #[Layout('components.layouts.app')] class extends Component
 {
     public ?int $locationId = null;
 
@@ -21,6 +23,11 @@ new class extends Component
         } else {
             $this->parent_id = $parent_id;
         }
+    }
+
+    public function title(): string
+    {
+        return $this->locationId ? 'Edit Location' : 'Add Location';
     }
 
     public function save(): void
@@ -58,47 +65,45 @@ new class extends Component
 };
 ?>
 
-<x-layouts.app :title="$isEditing ? 'Edit Location' : 'Add Location'">
-    <div class="p-4">
-        <div class="mb-4 flex items-center gap-3">
-            <a href="{{ route('locations.index') }}" class="text-indigo-600">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-                </svg>
-            </a>
-            <h1 class="text-xl font-bold text-gray-900">{{ $isEditing ? 'Edit Location' : 'Add Location' }}</h1>
+<div class="p-4">
+    <div class="mb-4 flex items-center gap-3">
+        <a href="{{ route('locations.index') }}" class="text-indigo-600">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+        </a>
+        <h1 class="text-xl font-bold text-gray-900">{{ $isEditing ? 'Edit Location' : 'Add Location' }}</h1>
+    </div>
+
+    <form wire:submit="save" class="space-y-4">
+        <div>
+            <label class="mb-1 block text-sm font-medium text-gray-700">Name</label>
+            <input wire:model="name" type="text" placeholder="e.g. Under the guest bed"
+                   class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+            @error('name') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
         </div>
 
-        <form wire:submit="save" class="space-y-4">
-            <div>
-                <label class="mb-1 block text-sm font-medium text-gray-700">Name</label>
-                <input wire:model="name" type="text" placeholder="e.g. Under the guest bed"
-                       class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
-                @error('name') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-            </div>
+        <div>
+            <label class="mb-1 block text-sm font-medium text-gray-700">Parent Location <span class="text-gray-400">(optional)</span></label>
+            <select wire:model="parent_id"
+                    class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+                <option value="">— None (top level) —</option>
+                @foreach($locations as $loc)
+                    <option value="{{ $loc->id }}">{{ $loc->fullPath() }}</option>
+                @endforeach
+            </select>
+        </div>
 
-            <div>
-                <label class="mb-1 block text-sm font-medium text-gray-700">Parent Location <span class="text-gray-400">(optional)</span></label>
-                <select wire:model="parent_id"
-                        class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
-                    <option value="">— None (top level) —</option>
-                    @foreach($locations as $loc)
-                        <option value="{{ $loc->id }}">{{ $loc->fullPath() }}</option>
-                    @endforeach
-                </select>
-            </div>
+        <div>
+            <label class="mb-1 block text-sm font-medium text-gray-700">Notes <span class="text-gray-400">(optional)</span></label>
+            <textarea wire:model="notes" rows="3" placeholder="Any extra details…"
+                      class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"></textarea>
+        </div>
 
-            <div>
-                <label class="mb-1 block text-sm font-medium text-gray-700">Notes <span class="text-gray-400">(optional)</span></label>
-                <textarea wire:model="notes" rows="3" placeholder="Any extra details…"
-                          class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"></textarea>
-            </div>
-
-            <button type="submit"
-                    class="w-full rounded-xl bg-indigo-700 py-3 text-base font-semibold text-white hover:bg-indigo-600 active:bg-indigo-800">
-                <span wire:loading.remove>{{ $isEditing ? 'Save Changes' : 'Add Location' }}</span>
-                <span wire:loading>Saving…</span>
-            </button>
-        </form>
-    </div>
-</x-layouts.app>
+        <button type="submit"
+                class="w-full rounded-xl bg-indigo-700 py-3 text-base font-semibold text-white hover:bg-indigo-600 active:bg-indigo-800">
+            <span wire:loading.remove>{{ $isEditing ? 'Save Changes' : 'Add Location' }}</span>
+            <span wire:loading>Saving…</span>
+        </button>
+    </form>
+</div>

@@ -3,10 +3,11 @@
 use App\Models\Item;
 use App\Models\Location;
 use App\Models\Photo;
+use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
-new class extends Component
+new #[Layout('components.layouts.app')] class extends Component
 {
     use WithFileUploads;
 
@@ -31,6 +32,11 @@ new class extends Component
         } else {
             $this->location_id = $location_id;
         }
+    }
+
+    public function title(): string
+    {
+        return $this->itemId ? 'Edit Item' : 'Add Item';
     }
 
     public function save(): void
@@ -87,99 +93,96 @@ new class extends Component
 };
 ?>
 
-<x-layouts.app :title="$isEditing ? 'Edit Item' : 'Add Item'">
-    <div class="p-4">
-        <div class="mb-4 flex items-center gap-3">
-            <a href="{{ $isEditing ? route('items.show', $itemId) : route('items.index') }}"
-               class="text-indigo-600">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-                </svg>
-            </a>
-            <h1 class="text-xl font-bold text-gray-900">{{ $isEditing ? 'Edit Item' : 'Add Item' }}</h1>
+<div class="p-4">
+    <div class="mb-4 flex items-center gap-3">
+        <a href="{{ $isEditing ? route('items.show', $itemId) : route('items.index') }}"
+           class="text-indigo-600">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+        </a>
+        <h1 class="text-xl font-bold text-gray-900">{{ $isEditing ? 'Edit Item' : 'Add Item' }}</h1>
+    </div>
+
+    <form wire:submit="save" class="space-y-4">
+        <div>
+            <label class="mb-1 block text-sm font-medium text-gray-700">Name</label>
+            <input wire:model="name" type="text" placeholder="e.g. Winter clothes"
+                   class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+            @error('name') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
         </div>
 
-        <form wire:submit="save" class="space-y-4">
-            <div>
-                <label class="mb-1 block text-sm font-medium text-gray-700">Name</label>
-                <input wire:model="name" type="text" placeholder="e.g. Winter clothes"
-                       class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
-                @error('name') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-            </div>
+        <div>
+            <label class="mb-1 block text-sm font-medium text-gray-700">
+                Also known as <span class="text-gray-400">(comma-separated)</span>
+            </label>
+            <input wire:model="aliasesText" type="text" placeholder="e.g. sweaters, coats, warm clothes"
+                   class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+        </div>
 
-            <div>
-                <label class="mb-1 block text-sm font-medium text-gray-700">
-                    Also known as <span class="text-gray-400">(comma-separated)</span>
-                </label>
-                <input wire:model="aliasesText" type="text" placeholder="e.g. sweaters, coats, warm clothes"
-                       class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
-            </div>
+        <div>
+            <label class="mb-1 block text-sm font-medium text-gray-700">Location</label>
+            <select wire:model="location_id"
+                    class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+                <option value="">— Unknown / Not set —</option>
+                @foreach($locations as $loc)
+                    <option value="{{ $loc->id }}">{{ $loc->fullPath() }}</option>
+                @endforeach
+            </select>
+        </div>
 
+        <div>
+            <label class="mb-1 block text-sm font-medium text-gray-700">
+                Description <span class="text-gray-400">(optional)</span>
+            </label>
+            <textarea wire:model="description" rows="2" placeholder="Any extra details…"
+                      class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"></textarea>
+        </div>
+
+        <div>
+            <label class="mb-1 block text-sm font-medium text-gray-700">
+                Tags <span class="text-gray-400">(comma-separated)</span>
+            </label>
+            <input wire:model="tagsText" type="text" placeholder="e.g. seasonal, holiday, tools"
+                   class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+        </div>
+
+        @if($existingPhotos->isNotEmpty())
             <div>
-                <label class="mb-1 block text-sm font-medium text-gray-700">Location</label>
-                <select wire:model="location_id"
-                        class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
-                    <option value="">— Unknown / Not set —</option>
-                    @foreach($locations as $loc)
-                        <option value="{{ $loc->id }}">{{ $loc->fullPath() }}</option>
+                <label class="mb-1 block text-sm font-medium text-gray-700">Current Photos</label>
+                <div class="flex gap-2">
+                    @foreach($existingPhotos as $photo)
+                        <div class="relative">
+                            <img src="{{ $photo->url }}" class="h-20 w-20 rounded-xl object-cover">
+                            <button type="button" wire:click="deletePhoto({{ $photo->id }})"
+                                    class="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white">
+                                ×
+                            </button>
+                        </div>
                     @endforeach
-                </select>
+                </div>
             </div>
+        @endif
 
-            <div>
-                <label class="mb-1 block text-sm font-medium text-gray-700">
-                    Description <span class="text-gray-400">(optional)</span>
-                </label>
-                <textarea wire:model="description" rows="2" placeholder="Any extra details…"
-                          class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"></textarea>
-            </div>
+        <div>
+            <label class="mb-1 block text-sm font-medium text-gray-700">
+                Add Photo <span class="text-gray-400">(optional)</span>
+            </label>
+            <input wire:model="photo" type="file" accept="image/*" capture="environment"
+                   class="w-full text-sm text-gray-500 file:mr-3 file:rounded-full file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-indigo-700">
+            @error('photo') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
 
-            <div>
-                <label class="mb-1 block text-sm font-medium text-gray-700">
-                    Tags <span class="text-gray-400">(comma-separated)</span>
-                </label>
-                <input wire:model="tagsText" type="text" placeholder="e.g. seasonal, holiday, tools"
-                       class="w-full rounded-xl border border-gray-300 px-4 py-3 text-base focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
-            </div>
-
-            {{-- Existing photos --}}
-            @if($existingPhotos->isNotEmpty())
-                <div>
-                    <label class="mb-1 block text-sm font-medium text-gray-700">Current Photos</label>
-                    <div class="flex gap-2">
-                        @foreach($existingPhotos as $photo)
-                            <div class="relative">
-                                <img src="{{ $photo->url }}" class="h-20 w-20 rounded-xl object-cover">
-                                <button type="button" wire:click="deletePhoto({{ $photo->id }})"
-                                        class="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white">
-                                    ×
-                                </button>
-                            </div>
-                        @endforeach
-                    </div>
+            @if($photo)
+                <div class="mt-2">
+                    <img src="{{ $photo->temporaryUrl() }}" class="h-24 w-24 rounded-xl object-cover">
                 </div>
             @endif
+        </div>
 
-            <div>
-                <label class="mb-1 block text-sm font-medium text-gray-700">
-                    Add Photo <span class="text-gray-400">(optional)</span>
-                </label>
-                <input wire:model="photo" type="file" accept="image/*" capture="environment"
-                       class="w-full text-sm text-gray-500 file:mr-3 file:rounded-full file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-indigo-700">
-                @error('photo') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-
-                @if($photo)
-                    <div class="mt-2">
-                        <img src="{{ $photo->temporaryUrl() }}" class="h-24 w-24 rounded-xl object-cover">
-                    </div>
-                @endif
-            </div>
-
-            <button type="submit"
-                    class="w-full rounded-xl bg-indigo-700 py-3 text-base font-semibold text-white hover:bg-indigo-600 active:bg-indigo-800">
-                <span wire:loading.remove>{{ $isEditing ? 'Save Changes' : 'Add Item' }}</span>
-                <span wire:loading>Saving…</span>
-            </button>
-        </form>
-    </div>
-</x-layouts.app>
+        <button type="submit"
+                class="w-full rounded-xl bg-indigo-700 py-3 text-base font-semibold text-white hover:bg-indigo-600 active:bg-indigo-800">
+            <span wire:loading.remove>{{ $isEditing ? 'Save Changes' : 'Add Item' }}</span>
+            <span wire:loading>Saving…</span>
+        </button>
+    </form>
+</div>

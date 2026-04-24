@@ -11,21 +11,18 @@ new class extends Component
 
     public ?string $answer = null;
     public $matchedItems = null;
-    public bool $loading = false;
     public bool $hasSearched = false;
 
     public function search(SearchService $searchService): void
     {
         $this->validate();
 
-        $this->loading = true;
         $this->hasSearched = true;
 
         $result = $searchService->query($this->query);
 
         $this->answer = $result['answer'];
         $this->matchedItems = $result['items'];
-        $this->loading = false;
     }
 
     public function clear(): void
@@ -73,13 +70,7 @@ new class extends Component
                 </div>
                 <button type="submit"
                         class="rounded-2xl bg-indigo-700 px-5 py-4 font-semibold text-white shadow-sm hover:bg-indigo-600 active:bg-indigo-800">
-                    <span wire:loading.remove wire:target="search">Ask</span>
-                    <span wire:loading wire:target="search">
-                        <svg class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-                        </svg>
-                    </span>
+                    Search
                 </button>
             </div>
             @error('query')

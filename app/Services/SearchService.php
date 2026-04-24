@@ -2,67 +2,67 @@
 
 namespace App\Services;
 
-use Anthropic\Client;
 use App\Models\Item;
+use Illuminate\Support\Collection;
 
 class SearchService
 {
-    public function __construct(private readonly Client $client) {}
-
     public function query(string $question): array
     {
-        $items = Item::with('location')->get();
+        $terms = $this->extractTerms($question);
 
-        if ($items->isEmpty()) {
+        if (empty($terms)) {
             return [
-                'answer' => "You haven't added any items yet. Tap the + button to add your first item!",
+                'answer' => 'Try searching for an item name, like "winter clothes" or "wrapping paper".',
                 'items' => collect(),
             ];
         }
 
-        $index = $items->map(fn (Item $item) => $item->toSearchEntry())->values()->toJson();
-
-        $prompt = <<<PROMPT
-You are a helpful home inventory assistant. The user stores items in their house and wants to find where things are.
-
-Below is a JSON index of all items in the inventory. Each item has a name, optional aliases, description, tags, and location (as a full path like "Guest Bedroom > Under the Bed > Blue Bin").
-
-Inventory:
-{$index}
-
-The user's question: "{$question}"
-
-Instructions:
-- Answer in a single friendly, conversational sentence or two.
-- If you find a match, name the item and describe exactly where it is using its full location path.
-- If multiple items could match, mention all of them.
-- If nothing matches, say so helpfully and suggest they add the item.
-- Do not mention that you searched a JSON index.
-- Also return a JSON array of matching item IDs (or empty array) on the last line in this exact format: ITEM_IDS:[1,2,3]
-PROMPT;
-
-        $response = $this->client->messages->create(
-            messages: [['role' => 'user', 'content' => $prompt]],
-            model: 'claude-haiku-4-5-20251001',
-            maxTokens: 512,
-        );
-
-        $content = $response->content[0]->text;
-
-        preg_match('/ITEM_IDS:\[([^\]]*)\]/', $content, $matches);
-        $itemIds = isset($matches[1]) && $matches[1] !== ''
-            ? array_map('intval', explode(',', $matches[1]))
-            : [];
-
-        $answer = trim(preg_replace('/ITEM_IDS:\[[^\]]*\]/', '', $content));
-
-        $matchedItems = $itemIds
-            ? Item::with(['location', 'photos'])->whereIn('id', $itemIds)->get()
-            : collect();
+        $items = Item::with(['location', 'photos'])
+            ->where(function ($query) use ($terms) {
+                foreach ($terms as $term) {
+                    $query->where(function ($q) use ($term) {
+                        $q->where('name', 'like', "%{$term}%")
+                            ->orWhere('description', 'like', "%{$term}%")
+                            ->orWhere('aliases', 'like', "%{$term}%")
+                            ->orWhere('tags', 'like', "%{$term}%");
+                    });
+                }
+            })
+            ->get();
 
         return [
-            'answer' => $answer,
-            'items' => $matchedItems,
+            'answer' => $this->buildAnswer($question, $items),
+            'items' => $items,
         ];
+    }
+
+    /** Strip filler words from natural-language questions to get searchable terms. */
+    private function extractTerms(string $question): array
+    {
+        $stopWords = ['where', 'is', 'are', 'my', 'the', 'a', 'an', 'i', 'did', 'put', 'find', 'do', 'have', 'was', 'were', 'it', 'of', 'in', 'at', 'to', 'for'];
+
+        $words = preg_split('/\s+/', strtolower(preg_replace('/[^\w\s]/', '', $question)));
+
+        return array_values(array_filter($words, fn ($w) => strlen($w) > 1 && ! in_array($w, $stopWords)));
+    }
+
+    private function buildAnswer(string $question, Collection $items): string
+    {
+        if ($items->isEmpty()) {
+            return "I couldn't find anything matching that. Try a different word, or add the item using the + button.";
+        }
+
+        if ($items->count() === 1) {
+            $item = $items->first();
+            $location = $item->location?->fullPath() ?? 'an unknown location';
+
+            return "Your {$item->name} is in {$location}.";
+        }
+
+        $names = $items->take(3)->pluck('name')->implode(', ');
+        $extra = $items->count() > 3 ? ' and '.($items->count() - 3).' more' : '';
+
+        return "I found {$items->count()} matching items: {$names}{$extra}. Tap one to see exactly where it is.";
     }
 }

@@ -1,0 +1,23 @@
+environment: production
+
+services:
+  - type: web
+    name: stash
+    build:
+      - composer install --no-dev --optimize-autoloader
+      - npm ci
+      - npm run build
+    deploy:
+      - php artisan migrate --force
+      - php artisan config:cache
+      - php artisan route:cache
+      - php artisan view:cache
+      - php artisan storage:link
+
+databases:
+  - type: postgresql
+    name: stash-db
+
+storage:
+  - type: s3
+    name: stash-storage
